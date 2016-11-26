@@ -100,8 +100,17 @@ def q3_output(rare, filename):
 # and the second is a tag, and the value is the log probability of the emission of the word given the tag
 # The second return value is a set of all possible tags for this data set
 def calc_emission(brown_words_rare, brown_tags):
-    e_values = {}
-    taglist = set([])
+    words = [item for sublist in brown_words_rare for item in sublist]
+    tags = [item for sublist in brown_tags for item in sublist]
+
+    tagged_words = [(tag,word) for tag,word in zip(tags,words)]
+
+    fd = nltk.ConditionalFreqDist(tagged_words)
+    pd = nltk.ConditionalProbDist(fd, nltk.MLEProbDist)
+
+    e_values = { (item[1], item[0]) : pd[item[0]].logprob(item[1]) for item in tagged_words }
+    taglist = set([item for sublist in brown_tags for item in sublist])
+
     return e_values, taglist
 
 # This function takes the output from calc_emissions() and outputs it
