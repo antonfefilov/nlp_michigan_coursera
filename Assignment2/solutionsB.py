@@ -3,6 +3,8 @@ import nltk
 import math
 import time
 
+import numpy as np
+
 START_SYMBOL = '*'
 STOP_SYMBOL = 'STOP'
 RARE_SYMBOL = '_RARE_'
@@ -109,7 +111,7 @@ def calc_emission(brown_words_rare, brown_tags):
     pd = nltk.ConditionalProbDist(fd, nltk.MLEProbDist)
 
     e_values = { (item[1], item[0]) : pd[item[0]].logprob(item[1]) for item in tagged_words }
-    taglist = set([item for sublist in brown_tags for item in sublist])
+    taglist = set(tags)
 
     return e_values, taglist
 
@@ -136,9 +138,57 @@ def q4_output(e_values, filename):
 # The return value is a list of tagged sentences in the format "WORD/TAG", separated by spaces. Each sentence is a string with a
 # terminal newline, not a list of tokens. Remember also that the output should not contain the "_RARE_" symbol, but rather the
 # original words of the sentence!
-def viterbi(brown_dev_words, taglist, known_words, q_values, e_values):
-    tagged = []
-    return tagged
+def viterbi(brown_dev_words, taglist_1, known_words, q_values, e_values):
+    prob = { (0,"*","*") : 0 }
+    bp = {}
+    taglist = taglist_1 - set(["*", "STOP"])
+    sentence = ["*", "*"] + brown_dev_words[1]
+    n = len(brown_dev_words[1])
+
+    # k = 1:
+    for v in taglist:
+      if ("*",v) in e_values:
+        prob[(1,"*",v)] = q_values["*","*",v] if ("*","*",v) in q_values else LOG_PROB_OF_ZERO + e_values["*", v]
+      else:
+        prob[(1,"*",v)] = q_values["*","*",v] if ("*","*",v) in q_values else LOG_PROB_OF_ZERO + e_values[RARE_SYMBOL, v]
+
+    # k = 2:
+    for u in taglist:
+      for v in taglist:
+        e_value = e_values[RARE_SYMBOL, v]
+        if ("*",v) in e_values:
+          e_value = e_values["*", v]
+
+        q_value= LOG_PROB_OF_ZERO
+        if ("*",u,v) in q_values:
+          q_value = q_values["*",u,v]
+
+        prob[(2,u,v)] = prob[(1,"*",v)] + q_value + e_value
+
+    # k > 2
+    for k in xrange(3, n+1):
+      for u in taglist:
+        for v in taglist:
+          e_value = e_values[RARE_SYMBOL, v]
+          if (sentence[k-1],v) in e_values:
+            e_value = e_values[sentence[k-1], v]
+
+          prob[(k,u,v)] = max([prob[(k-1,w,u)] + (q_values[w,u,v] if (w,u,v) in q_values else LOG_PROB_OF_ZERO) + e_value for w in taglist])
+
+          print { (k,u,v) : prob[(k-1,w,u)] + (q_values[w,u,v] if (w,u,v) in q_values else LOG_PROB_OF_ZERO) + e_value for w in taglist }
+          bp[(k,u,v)] = list(taglist)[np.argmax([prob[(k-1,w,u)] + (q_values[w,u,v] if (w,u,v) in q_values else LOG_PROB_OF_ZERO) + e_value for w in taglist])]
+
+    tags = {}
+
+    taglist_1 = [(u,v) for u in taglist for v in taglist]
+    tags[n-1], tags[n] = list(taglist_1)[np.argmax([prob[(n-1,item[0],item[1])] + (q_values[item[0],item[1],"STOP"] if (item[0],item[1],"STOP") in q_values else LOG_PROB_OF_ZERO) for item in taglist_1 ])]
+
+    for k in range(n-2,0,-1):
+      tags[k] = bp[k+2,tags[k+1],tags[k+2]]
+
+    # tagged = []
+    # return tagged
+    return prob, bp, tags
 
 # This function takes the output of viterbi() and outputs it to file
 def q5_output(tagged, filename):
