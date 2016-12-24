@@ -1,8 +1,9 @@
 import sys
 import unicodedata
 from xml.dom import minidom
-import A
-import B
+# import A
+# import B
+import C
 
 def replace_accented(input_str):
     nkfd_form = unicodedata.normalize('NFKD', input_str)
@@ -59,13 +60,14 @@ if __name__ == '__main__':
 
     train_file = sys.argv[1]
     test_file = sys.argv[2]
-    # knn_answer = sys.argv[3]
-    # svm_answer = sys.argv[4]
-    best_answer = sys.argv[3]
-    language = sys.argv[4]
+    knn_answer = sys.argv[3]
+    svm_answer = sys.argv[4]
+    best_answer = sys.argv[5]
+    language = sys.argv[6]
 
     train_set = parse_data(train_file)
     test_set = parse_data(test_file)
 
     # A.run(train_set, test_set, language, knn_answer, svm_answer)
-    B.run(train_set, test_set, language, best_answer)
+    # B.run(train_set, test_set, language, best_answer)
+    C.run(train_set, test_set, language, knn_answer, svm_answer, best_answer)
